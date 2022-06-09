@@ -1,0 +1,85 @@
+---
+title: "FOFS_Processing"
+author: "Laura E. Wiltsee"
+date: "6/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("M3")
+library("dplyr")
+library("gam")
+library ("readxl")
+library("car")
+library("GGally")
+library('gamlss')
+library("psych")
+library("imputeTS")
+library("forecast")
+library("Metrics")
+library("tidyverse")
+library("reticulate")
+
+rm()
+```
+
+Analysis of second-by-second Chlorophyll a measurements to determine individual oyster feeding rate variation on a daily timescales
+
+```{r}
+##### Things to change #######
+date= "220429"
+
+# Can find a way to automate this with "size_traits_LEW.xlsx"
+o1_dt= 4.56
+#o2_dt= 
+o3_dt= 4.18
+```
+
+Function to prepare the fluorometery data.
+Remove setwd once the markdown file is in the same folder as the data!
+```{r prep_fluoro}
+setwd("~/Library/CloudStorage/OneDrive-Personal/Masters/Data/FOFS") # Remove once this script is in the same folder as the data!
+prep_fluoro= function(chamber) {
+  dat= read.csv(paste0(date,chamber))
+  dat$datetime= as.POSIXct(paste(dat$Date, dat$Time), format="%m/%d/%Y %H:%M:%S")
+  dat.new= subset(dat, select= c("datetime","mV")) # Selects just the mV and time
+  if (all(dat['Gain']=="10x")) {
+    return(dat.new)
+  } else {print ("Not all gains are the same!")}
+}
+
+control= prep_fluoro("_com4.csv")
+o1= prep_fluoro("_com5.csv")
+o3= prep_fluoro("_com3.csv")
+```
+
+```{r}
+dat1= merge(x= control, y= o1, by= "datetime", all= TRUE)
+dat2= merge(x= dat1, y= o3, by= "datetime", all= TRUE)
+dat= na.omit(dat2)
+colnames(dat)= c("dattime","control","o1","o3")
+```
+
+
+```{r}
+####### Calibration #########
+cal= function(chamber,blank,std) {
+  pre= 10/(std-blank)
+  cal_new = (chamber - blank)* pre
+  return(cal_new)
+}
+
+dat$Control_cal= cal(dat$control,17,77)
+dat$o1_cal= cal(dat$o1,17,86)
+dat$o3_cal= cal(dat$o3,17,79)
+
+#### Converting to CR in mg/L #####
+cr= function(chamber, control, fr) {
+  o_cr= fr*((control-chamber)/control)
+  return(o_cr)
+}
+
+dat$o1_cr= cr(dat$o1_cal, dat$Control_cal, 7)
+dat$o3_cr= cr(dat$o3_cal, dat$Control_cal, 7)
+```

@@ -28,13 +28,13 @@ Analysis of second-by-second Chlorophyll a measurements to determine individual 
 
 ```{r}
 ##### Things to change #######
-date= "220429"
-date_long= "April 29, 2022"
+date= "220602"
+date_long= "June 02, 2022"
 
 # Can find a way to automate this with "size_traits_LEW.xlsx"
-o1_dt= 4.56
+o1_dt= 3.52
 o2_dt= 3.79
-o3_dt= 4.18
+o3_dt= 3.95
 bw= 2.22 # Boat Weight in grams (enter zero if dw does not include weigh boat)
 ```
 
@@ -49,26 +49,25 @@ prep_fluoro= function(chamber) {
   } else {print ("Not all gains are the same!")}
 }
 
-control= prep_fluoro("_com4.csv")
-o1= prep_fluoro("_com5.csv")
-#o2= prep_fluoro("_com6.csv")
-o3= prep_fluoro("_com3.csv")
+control= prep_fluoro("_com5.csv")
+o1= prep_fluoro("_com8.csv")
+o2= prep_fluoro("_com7.csv")
+o3= prep_fluoro("_com6.csv")
 ```
 
 ```{r, warning=FALSE}
 dat1= merge(x= control, y= o1, by= "datetime", all= TRUE)
-dat2= dat1#merge(x= dat1, y= o2, by= "datetime", all= TRUE)
+dat2= merge(x= dat1, y= o2, by= "datetime", all= TRUE)
 dat3= merge(x= dat2, y= o3, by= "datetime", all= TRUE)
 dat= na.omit(dat3)
-colnames(dat)= c("dattime","control","o1"#,"o2"
-                 ,"o3")
+colnames(dat)= c("dattime","control","o1","o2","o3")
 ```
 
 Plotting Raw mV values
 ```{r}
 plot(x= dat$dattime, y= dat$control, col=1, type="l")
 plot(x= dat$dattime, y= dat$o1, col=2, type="l")
-#plot(x= dat$dattime, y= dat$o2, col=3, type="l")
+plot(x= dat$dattime, y= dat$o2, col=3, type="l")
 plot(x= dat$dattime, y= dat$o3, col=4, type="l")
 ```
 
@@ -83,7 +82,7 @@ cal= function(chamber,blank,std) {
 
 dat$Control_cal= cal(dat$control,17,77)
 dat$o1_cal= cal(dat$o1,17,86)
-#dat$o2_cal= cal(dat$o2,15,79)
+dat$o2_cal= cal(dat$o2,15,79)
 dat$o3_cal= cal(dat$o3,17,79)
 
 #### Converting to CR in mg/L #####
@@ -93,43 +92,41 @@ cr= function(chamber, control, fr) {
 }
 
 dat$o1_cr= cr(dat$o1_cal, dat$Control_cal, 7)
-#dat$o2_cr= cr(dat$o2_cal, dat$Control_cal, 7)
+dat$o2_cr= cr(dat$o2_cal, dat$Control_cal, 7)
 dat$o3_cr= cr(dat$o3_cal, dat$Control_cal, 7)
 ```
 
 Correcting for Dry Weight
 ```{r}
 dat$o1_crdw= dat$o1_cr/(o1_dt-bw)
-#dat$o2_crdw= dat$o2_cr/(o2_dt-bw)
+dat$o2_crdw= dat$o2_cr/(o2_dt-bw)
 dat$o3_crdw= dat$o3_cr/(o3_dt-bw)
 ```
 
 Plotting Raw L/g/hr Values
 ```{r}
 plot(x= dat$dattime, y= dat$o1_crdw, col=2, type="l")
-#plot(x= dat$dattime, y= dat$o2_crdw, col=3, type="l")
+plot(x= dat$dattime, y= dat$o2_crdw, col=3, type="l")
 plot(x= dat$dattime, y= dat$o3_crdw, col=4, type="l")
 ```
 
 ```{r, echo=FALSE, results='hide'}
 jpeg(file=paste(date,"_CR_plot.jpeg")) # Creates a jpeg of the plot that is updated every time
-dat_clean= dat
-plot(x= dat_clean$dattime, y= dat_clean$o1_crdw, col=2, type="l", ylab= "Oyster Clearance Rate (L/h/g DW)", xlab="Time", main=paste("Oyster Clearance Rate per Gram over Time for",date_long), ylim=c(-6,4))
-#lines(x= dat_clean$dattime, y= dat_clean$o2_crdw, col= 3)
+dat_clean= dat[c(1:70000),]
+plot(x= dat_clean$dattime, y= dat_clean$o1_crdw, col=2, type="l", ylab= "Oyster Clearance Rate (L/h/g DW)", xlab="Time", main=paste("Oyster Clearance Rate per Gram over Time for",date_long))
+lines(x= dat_clean$dattime, y= dat_clean$o2_crdw, col= 3)
 lines(x= dat_clean$dattime, y= dat_clean$o3_crdw, col= 4)
-legend("bottomright", c("Oyster 1"#,"Oyster 2"
-                     , "Oyster 3"), col = c(2,4),pch = 16)
+legend("bottomright", c("Oyster 1","Oyster 2", "Oyster 3"), col = 2:4,pch = 16)
 dev.off()
 ```
 
 Plotting Cleaned Data
 ```{r}
-dat_clean= dat
-plot(x= dat_clean$dattime, y= dat_clean$o1_crdw, col=2, type="l", ylab= "Oyster Clearance Rate (L/h/g DW)", xlab="Time", main=paste("Oyster Clearance Rate per Gram over Time for",date_long), ylim=c(-6,4))
-#lines(x= dat_clean$dattime, y= dat_clean$o2_crdw, col= 3)
+dat_clean= dat[c(1:70000),]
+plot(x= dat_clean$dattime, y= dat_clean$o1_crdw, col=2, type="l", ylab= "Oyster Clearance Rate (L/h/g DW)", xlab="Time", main=paste("Oyster Clearance Rate per Gram over Time for",date_long))
+lines(x= dat_clean$dattime, y= dat_clean$o2_crdw, col= 3)
 lines(x= dat_clean$dattime, y= dat_clean$o3_crdw, col= 4)
-legend("bottomright", c("Oyster 1"#,"Oyster 2"
-                     , "Oyster 3"), col = c(2,4),pch = 16)
+legend("bottomright", c("Oyster 1","Oyster 2", "Oyster 3"), col = 2:4,pch = 16)
 ```
 
 
